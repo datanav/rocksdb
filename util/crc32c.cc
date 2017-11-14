@@ -9,7 +9,7 @@
 //
 // A portable implementation of crc32c, optimized to handle
 // four bytes at a time.
-
+#include <iostream>
 #include "util/crc32c.h"
 #include <stdint.h>
 #ifdef HAVE_SSE42
@@ -582,11 +582,32 @@ const uint64_t clmul_constants[] = {
     0x1a91647f2, 0x169cf9eb0, 0x1a0f717c4, 0x0170076fa,
 };
 
+// Compute the crc32c value for buffer smaller than 8
+void inline align_to_8(
+    size_t len,
+    uint64_t& crc0, // crc so far, updated on return
+    const unsigned char*& next) { // next data pointer, updated on return
+  uint32_t crc32bit = static_cast<uint32_t>(crc0);
+  if (len & 0x04) {
+    crc32bit = _mm_crc32_u32(crc32bit, *(uint32_t*)next);
+    next += sizeof(uint32_t);
+  }
+  if (len & 0x02) {
+    crc32bit = _mm_crc32_u16(crc32bit, *(uint16_t*)next);
+    next += sizeof(uint16_t);
+  }
+  if (len & 0x01) {
+    crc32bit = _mm_crc32_u8(crc32bit, *(next));
+    next++;
+  }
+  crc0 = crc32bit;
+}
 
-/*
- * CombineCRC performs pclmulqdq multiplication of 2 partial CRC's and a well
- * chosen constant and xor's these with the remaining CRC.
- */
+
+//
+// CombineCRC performs pclmulqdq multiplication of 2 partial CRC's and a well
+// chosen constant and xor's these with the remaining CRC.
+//
 uint64_t inline CombineCRC(
     size_t block_size,
     uint64_t crc0,
@@ -607,7 +628,7 @@ uint64_t inline CombineCRC(
 }
 
 
-/* Compute CRC-32C using the Intel hardware instruction. */
+// Compute CRC-32C using the Intel hardware instruction.
 uint32_t crc32c_3way(uint32_t crc, const char* buf, size_t len) {
   const unsigned char* next = (const unsigned char*)buf;
   unsigned long count;
@@ -617,27 +638,12 @@ uint32_t crc32c_3way(uint32_t crc, const char* buf, size_t len) {
   if (len >= 8) {
     // if len > 216 then align and use triplets
     if (len > 216) {
-      {
+      //{
         // Work on the bytes (< 8) before the first 8-byte alignment addr starts
-        // create this block actually prevent 2 asignments
-        uint32_t crc32bit = crc0;
-        unsigned long align = (8 - (uintptr_t)next) & 7; // byte to boundary
-        len -= align;
-        if (align & 0x04) {
-          crc32bit = _mm_crc32_u32(crc32bit, *(uint32_t*)next);
-          next += sizeof(uint32_t);
-        }
-        if (align & 0x02) {
-          crc32bit = _mm_crc32_u16(crc32bit, *(uint16_t*)next);
-          next += sizeof(uint16_t);
-        }
-
-        if (align & 0x01) {
-          crc32bit = _mm_crc32_u8(crc32bit, *(next));
-          next++;
-        }
-        crc0 = crc32bit;
-      }
+        unsigned long align_bytes = (8 - (uintptr_t)next) & 7;
+        len -= align_bytes;
+        align_to_8(align_bytes, crc0, next);
+      //}
 
       // Now work on the remaining blocks
       count = len / 24; // number of triplets
@@ -995,22 +1001,8 @@ uint32_t crc32c_3way(uint32_t crc, const char* buf, size_t len) {
     }
   }
   {
-    uint32_t crc32bit = crc0;
-    // less than 8 bytes remain
-    /* compute the crc for up to seven trailing bytes */
-    if (len & 0x04) {
-      crc32bit = _mm_crc32_u32(crc32bit, *(uint32_t*)next);
-      next += 4;
-    }
-    if (len & 0x02) {
-      crc32bit = _mm_crc32_u16(crc32bit, *(uint16_t*)next);
-      next += 2;
-    }
-
-    if (len & 0x01) {
-      crc32bit = _mm_crc32_u8(crc32bit, *(next));
-    }
-    return (uint32_t)crc32bit;
+    align_to_8(len, crc0, next);
+    return (uint32_t)crc0;
   }
 }
 
