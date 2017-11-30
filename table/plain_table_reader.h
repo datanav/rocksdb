@@ -85,7 +85,8 @@ class PlainTableReader: public TableReader {
   void Prepare(const Slice& target) override;
 
   Status Get(const ReadOptions&, const Slice& key, GetContext* get_context,
-             bool skip_filters = false) override;
+             bool skip_filters = false,
+             uint64_t* filter_nanos = nullptr, uint64_t* index_nanos = nullptr) override;
 
   uint64_t ApproximateOffsetOf(const Slice& key) override;
 

@@ -995,6 +995,8 @@ void Version::Get(const ReadOptions& read_options, const LookupKey& k,
       storage_info_.num_non_empty_levels_, &storage_info_.file_indexer_,
       user_comparator(), internal_comparator());
   FdWithKeyRange* f = fp.GetNextFile();
+  uint64_t filter_nanos = 0;
+  uint64_t index_nanos = 0;
   while (f != nullptr) {
     if (get_context.sample()) {
       sample_file_read_inc(f->file_metadata);
@@ -1004,7 +1006,7 @@ void Version::Get(const ReadOptions& read_options, const LookupKey& k,
         cfd_->internal_stats()->GetFileReadHist(fp.GetHitFileLevel()),
         IsFilterSkipped(static_cast<int>(fp.GetHitFileLevel()),
                         fp.IsHitFileLastInLevel()),
-        fp.GetCurrentLevel());
+        fp.GetCurrentLevel(), &filter_nanos, &index_nanos);
     // TODO: examine the behavior for corrupted key
     if (!status->ok()) {
       return;
@@ -1041,6 +1043,8 @@ void Version::Get(const ReadOptions& read_options, const LookupKey& k,
     }
     f = fp.GetNextFile();
   }
+  MeasureTime(db_statistics_, DB_GET_FILTER_NANOS, filter_nanos);
+  MeasureTime(db_statistics_, DB_GET_INDEX_NANOS, index_nanos);
 
   if (GetContext::kMerge == get_context.State()) {
     if (!merge_operator_) {

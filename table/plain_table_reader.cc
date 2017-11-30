@@ -538,7 +538,8 @@ void PlainTableReader::Prepare(const Slice& target) {
 }
 
 Status PlainTableReader::Get(const ReadOptions& ro, const Slice& target,
-                             GetContext* get_context, bool skip_filters) {
+                             GetContext* get_context, bool skip_filters,
+                             uint64_t* filter_nanos, uint64_t* index_nanos) {
   // Check bloom filter first.
   Slice prefix_slice;
   uint32_t prefix_hash;

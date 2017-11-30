@@ -1725,19 +1725,28 @@ bool BlockBasedTable::FullFilterKeyMayMatch(const ReadOptions& read_options,
 }
 
 Status BlockBasedTable::Get(const ReadOptions& read_options, const Slice& key,
-                            GetContext* get_context, bool skip_filters) {
+                            GetContext* get_context, bool skip_filters,
+                            uint64_t* filter_nanos, uint64_t* index_nanos) {
   Status s;
   const bool no_io = read_options.read_tier == kBlockCacheTier;
   CachableEntry<FilterBlockReader> filter_entry;
-  if (!skip_filters) {
-    filter_entry = GetFilter(/*prefetch_buffer*/ nullptr,
-                             read_options.read_tier == kBlockCacheTier);
+  FilterBlockReader* filter = nullptr;
+  bool full_filter_key_may_match = true;
+  {
+    StopWatchNano filter_sw(rep_->ioptions.env, true);
+    if (!skip_filters) {
+      filter_entry = GetFilter(/*prefetch_buffer*/ nullptr,
+                               read_options.read_tier == kBlockCacheTier);
+    }
+    filter = filter_entry.value;
+    full_filter_key_may_match = FullFilterKeyMayMatch(read_options, filter, key, no_io);
+    *filter_nanos += filter_sw.ElapsedNanos();
   }
-  FilterBlockReader* filter = filter_entry.value;
+
 
   // First check the full filter
   // If full filter not useful, Then go into each block
-  if (!FullFilterKeyMayMatch(read_options, filter, key, no_io)) {
+  if (!full_filter_key_may_match) {
     RecordTick(rep_->ioptions.statistics, BLOOM_FILTER_USEFUL);
   } else {
     BlockIter iiter_on_stack;
@@ -1748,7 +1757,12 @@ Status BlockBasedTable::Get(const ReadOptions& read_options, const Slice& key,
     }
 
     bool done = false;
-    for (iiter->Seek(key); iiter->Valid() && !done; iiter->Next()) {
+    {
+      StopWatchNano index_sw(rep_->ioptions.env, true);
+      iiter->Seek(key);
+      *index_nanos += index_sw.ElapsedNanos();
+    }
+    for (; iiter->Valid() && !done; iiter->Next()) {
       Slice handle_value = iiter->value();
 
       BlockHandle handle;

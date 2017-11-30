@@ -128,7 +128,8 @@ CuckooTableReader::CuckooTableReader(
 }
 
 Status CuckooTableReader::Get(const ReadOptions& readOptions, const Slice& key,
-                              GetContext* get_context, bool skip_filters) {
+                              GetContext* get_context, bool skip_filters,
+                              uint64_t* filter_nanos, uint64_t* index_nanos) {
   assert(key.size() == key_length_ + (is_last_level_ ? 8 : 0));
   Slice user_key = ExtractUserKey(key);
   for (uint32_t hash_cnt = 0; hash_cnt < num_hash_func_; ++hash_cnt) {

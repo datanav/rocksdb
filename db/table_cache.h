@@ -76,7 +76,8 @@ class TableCache {
              const InternalKeyComparator& internal_comparator,
              const FileDescriptor& file_fd, const Slice& k,
              GetContext* get_context, HistogramImpl* file_read_hist = nullptr,
-             bool skip_filters = false, int level = -1);
+             bool skip_filters = false, int level = -1,
+             uint64_t* filter_nanos = nullptr, uint64_t* index_nanos = nullptr);
 
   // Evict any entry for the specified file number
   static void Evict(Cache* cache, uint64_t file_number);

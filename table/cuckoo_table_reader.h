@@ -43,7 +43,8 @@ class CuckooTableReader: public TableReader {
   Status status() const { return status_; }
 
   Status Get(const ReadOptions& read_options, const Slice& key,
-             GetContext* get_context, bool skip_filters = false) override;
+             GetContext* get_context, bool skip_filters = false,
+             uint64_t* filter_nanos = nullptr, uint64_t* index_nanos = nullptr) override;
 
   InternalIterator* NewIterator(
       const ReadOptions&, Arena* arena = nullptr,

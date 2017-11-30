@@ -259,6 +259,9 @@ enum Tickers : uint32_t {
   BLOB_DB_FIFO_NUM_KEYS_EVICTED,
   BLOB_DB_FIFO_BYTES_EVICTED,
 
+  NUM_FILTER_ACCESS,
+  NUM_INDEX_ACCESS,
+
   TICKER_ENUM_MAX
 };
 
@@ -396,6 +399,9 @@ const std::vector<std::pair<Tickers, std::string>> TickersNameMap = {
     {BLOB_DB_FIFO_NUM_FILES_EVICTED, "rocksdb.blobdb.fifo.num.files.evicted"},
     {BLOB_DB_FIFO_NUM_KEYS_EVICTED, "rocksdb.blobdb.fifo.num.keys.evicted"},
     {BLOB_DB_FIFO_BYTES_EVICTED, "rocksdb.blobdb.fifo.bytes.evicted"},
+
+    {NUM_FILTER_ACCESS, "rocksdb.num.filter.access"},
+    {NUM_INDEX_ACCESS, "rocksdb.num.index.access"},
 };
 
 /**
@@ -463,6 +469,12 @@ enum Histograms : uint32_t {
   BLOB_DB_COMPRESSION_MICROS,
   BLOB_DB_DECOMPRESSION_MICROS,
 
+  DB_GET_FILTER_NANOS,
+  DB_GET_INDEX_NANOS,
+  BLOB_DB_WRITE_MUTEX_MICROS,
+  BLOB_DB_WRITE_ITERATE_WRITE_BATCH_MICROS,
+  BLOB_DB_WRITE_NUM_BLOB_FILES,
+
   HISTOGRAM_ENUM_MAX,  // TODO(ldemailly): enforce HistogramsNameMap match
 };
 
@@ -512,6 +524,11 @@ const std::vector<std::pair<Histograms, std::string>> HistogramsNameMap = {
     {BLOB_DB_GC_MICROS, "rocksdb.blobdb.gc.micros"},
     {BLOB_DB_COMPRESSION_MICROS, "rocksdb.blobdb.compression.micros"},
     {BLOB_DB_DECOMPRESSION_MICROS, "rocksdb.blobdb.decompression.micros"},
+    {DB_GET_FILTER_NANOS, "rocksdb.db.get.filter.nanos"},
+    {DB_GET_INDEX_NANOS, "rocksdb.db.get.index.nanos"},
+    {BLOB_DB_WRITE_MUTEX_MICROS, "rocksdb.blobdb.write.mutex.micros"},
+    {BLOB_DB_WRITE_ITERATE_WRITE_BATCH_MICROS, "rocksdb.blobdb.write.iterate.write.batch.micros"},
+    {BLOB_DB_WRITE_NUM_BLOB_FILES, "rocksdb.blobdb.write.num.blob_files"},
 };
 
 struct HistogramData {

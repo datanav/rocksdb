@@ -309,7 +309,8 @@ Status TableCache::Get(const ReadOptions& options,
                        const InternalKeyComparator& internal_comparator,
                        const FileDescriptor& fd, const Slice& k,
                        GetContext* get_context, HistogramImpl* file_read_hist,
-                       bool skip_filters, int level) {
+                       bool skip_filters, int level,
+                       uint64_t* filter_nanos, uint64_t* index_nanos) {
   std::string* row_cache_entry = nullptr;
   bool done = false;
 #ifndef ROCKSDB_LITE
@@ -395,7 +396,7 @@ Status TableCache::Get(const ReadOptions& options,
     }
     if (s.ok()) {
       get_context->SetReplayLog(row_cache_entry);  // nullptr if no cache.
-      s = t->Get(options, k, get_context, skip_filters);
+      s = t->Get(options, k, get_context, skip_filters, filter_nanos, index_nanos);
       get_context->SetReplayLog(nullptr);
     } else if (options.read_tier == kBlockCacheTier && s.IsIncomplete()) {
       // Couldn't find Table in cache but treat as kFound if no_io set

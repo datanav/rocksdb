@@ -33,7 +33,8 @@ InternalIterator* MockTableReader::NewIterator(const ReadOptions&,
 }
 
 Status MockTableReader::Get(const ReadOptions&, const Slice& key,
-                            GetContext* get_context, bool skip_filters) {
+                            GetContext* get_context, bool skip_filters,
+                            uint64_t* filter_nanos, uint64_t* index_nanos) {
   std::unique_ptr<MockTableIterator> iter(new MockTableIterator(table_));
   for (iter->Seek(key); iter->Valid(); iter->Next()) {
     ParsedInternalKey parsed_key;

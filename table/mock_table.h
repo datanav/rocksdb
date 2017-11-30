@@ -43,7 +43,8 @@ class MockTableReader : public TableReader {
                                 bool skip_filters = false) override;
 
   Status Get(const ReadOptions&, const Slice& key, GetContext* get_context,
-             bool skip_filters = false) override;
+             bool skip_filters = false,
+             uint64_t* filter_nanos = nullptr, uint64_t* index_micros = nullptr) override;
 
   uint64_t ApproximateOffsetOf(const Slice& key) override { return 0; }
 

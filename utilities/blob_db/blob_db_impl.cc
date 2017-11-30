@@ -10,6 +10,7 @@
 #include <iomanip>
 #include <limits>
 #include <memory>
+#include <unordered_set>
 
 #include "db/db_impl.h"
 #include "db/write_batch_internal.h"
@@ -673,6 +674,7 @@ class BlobDBImpl::BlobInserter : public WriteBatch::Handler {
   uint32_t default_cf_id_;
   SequenceNumber sequence_;
   WriteBatch batch_;
+  std::unordered_set<uint64_t> files_;
 
  public:
   BlobInserter(const WriteOptions& options, BlobDBImpl* blob_db_impl,
@@ -686,6 +688,8 @@ class BlobDBImpl::BlobInserter : public WriteBatch::Handler {
 
   WriteBatch* batch() { return &batch_; }
 
+  size_t FilesWritten() { return files_.size(); }
+
   virtual Status PutCF(uint32_t column_family_id, const Slice& key,
                        const Slice& value) override {
     if (column_family_id != default_cf_id_) {
@@ -696,8 +700,10 @@ class BlobDBImpl::BlobInserter : public WriteBatch::Handler {
     Slice value_slice;
     uint64_t expiration =
         blob_db_impl_->ExtractExpiration(key, value, &value_slice, &new_value);
+    uint64_t file_number;
     Status s = blob_db_impl_->PutBlobValue(options_, key, value_slice,
-                                           expiration, sequence_, &batch_);
+                                           expiration, sequence_, &batch_, &file_number);
+    files_.insert(file_number);
     sequence_++;
     return s;
   }
@@ -753,9 +759,13 @@ Status BlobDBImpl::Write(const WriteOptions& options, WriteBatch* updates) {
     // Release write_mutex_ before DB write to avoid race condition with
     // flush begin listener, which also require write_mutex_ to sync
     // blob files.
+    std::unique_ptr<StopWatch> mutex_sw(new StopWatch(env_, statistics_, BLOB_DB_WRITE_MUTEX_MICROS));
     MutexLock l(&write_mutex_);
+    mutex_sw.reset();
+    StopWatch iterate_sw(env_, statistics_, BLOB_DB_WRITE_ITERATE_WRITE_BATCH_MICROS);
     s = updates->Iterate(&blob_inserter);
   }
+  MeasureTime(statistics_, BLOB_DB_WRITE_NUM_BLOB_FILES, blob_inserter.FilesWritten());
   if (!s.ok()) {
     return s;
   }
@@ -876,7 +886,8 @@ Status BlobDBImpl::PutUntil(const WriteOptions& options, const Slice& key,
 
 Status BlobDBImpl::PutBlobValue(const WriteOptions& options, const Slice& key,
                                 const Slice& value, uint64_t expiration,
-                                SequenceNumber sequence, WriteBatch* batch) {
+                                SequenceNumber sequence, WriteBatch* batch,
+                                uint64_t* file_number) {
   Status s;
   std::string index_entry;
   uint32_t column_family_id =
@@ -899,6 +910,10 @@ Status BlobDBImpl::PutBlobValue(const WriteOptions& options, const Slice& key,
                                           : SelectBlobFile();
     if (!bfile) {
       return Status::NotFound("Blob file not found");
+    }
+
+    if (file_number != nullptr) {
+      *file_number = bfile->BlobFileNumber();
     }
 
     assert(bfile->compression() == bdb_options_.compression);
