@@ -210,7 +210,7 @@ class BackupEngineImpl : public BackupEngine {
     std::unordered_map<std::string, std::shared_ptr<FileInfo>>* file_infos_;
     Env* env_;
 
-    static const size_t max_backup_meta_file_size_ = 10 * 1024 * 1024;  // 10MB
+    static const size_t max_backup_meta_file_size_ = 20 * 1024 * 1024;  // 20MB
   };  // BackupMeta
 
   inline std::string GetAbsolutePath(
