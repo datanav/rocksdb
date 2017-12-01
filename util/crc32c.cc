@@ -401,7 +401,7 @@ static bool isSSE42() {
 #elif defined(__GNUC__) && defined(__x86_64__) && !defined(IOS_CROSS_COMPILE)
   uint32_t c_;
   __asm__("cpuid" : "=c"(c_) : "a"(1) : "ebx", "edx");
-  return c_ & (1U << 20);  // copied from CpuId.h in Folly.
+  return c_ & (1U << 20);  // copied from CpuId.h in Folly. Test SSE42
 #elif defined(_WIN64)
   int info[4];
   __cpuidex(info, 0x00000001, 0);
@@ -410,7 +410,26 @@ static bool isSSE42() {
   return false;
 #endif
 }
+
+static bool isPCLMULQDQ() {
+#ifndef HAVE_SSE42
+// in build_detect_platform we set this macro when both SSE42 and PCLMULQDQ are
+// supported by compiler
+  return false;
+#elif defined(__GNUC__) && defined(__x86_64__) && !defined(IOS_CROSS_COMPILE)
+  uint32_t c_;
+  __asm__("cpuid" : "=c"(c_) : "a"(1) : "ebx", "edx");
+  return c_ & (1U << 1);  // PCLMULQDQ is in bit 1
+#elif defined(_WIN64)
+  int info[4];
+  __cpuidex(info, 0x00000001, 0);
+  return (info[2] & ((int)1 << 1)) != 0;
+#else
+  return false;
 #endif
+}
+
+#endif  // HAVE_POWER8
 
 typedef uint32_t (*Function)(uint32_t, const char*, size_t);
 
@@ -582,7 +601,7 @@ const uint64_t clmul_constants[] = {
 };
 
 // Compute the crc32c value for buffer smaller than 8
-void inline align_to_8(
+inline void align_to_8(
     size_t len,
     uint64_t& crc0, // crc so far, updated on return
     const unsigned char*& next) { // next data pointer, updated on return
@@ -602,12 +621,11 @@ void inline align_to_8(
   crc0 = crc32bit;
 }
 
-
 //
 // CombineCRC performs pclmulqdq multiplication of 2 partial CRC's and a well
 // chosen constant and xor's these with the remaining CRC.
 //
-uint64_t inline CombineCRC(
+inline uint64_t CombineCRC(
     size_t block_size,
     uint64_t crc0,
     uint64_t crc1,
@@ -625,7 +643,6 @@ uint64_t inline CombineCRC(
   crc2 = _mm_crc32_u64(crc2, crc0);
   return crc2;
 }
-
 
 // Compute CRC-32C using the Intel hardware instruction.
 uint32_t crc32c_3way(uint32_t crc, const char* buf, size_t len) {
@@ -1011,15 +1028,28 @@ uint32_t crc32c_3way(uint32_t crc, const char* buf, size_t len) {
 static inline Function Choose_Extend() {
 #ifndef HAVE_POWER8
   if (isSSE42()) {
-#ifndef NO_THREEWAY_CRC32C
-    return crc32c_3way;
-#else
+    if (isPCLMULQDQ()) {
+#ifndef NO_THREEWAY_CRC32C  // should use crc32c_3way when possible
+
+#ifdef HAVE_SSE42  // crc32c_3way was defined under HAVE_SSE42
+      return crc32c_3way;
+#else  // not defined HAVE_SSE42
+      return ExtendImpl<Fast_CRC32>;
+#endif  // HAVE_SSE42
+
+#else  // defined NO_THREEWAY_CRC32C, should use Fast_CRC32 when possible
     return ExtendImpl<Fast_CRC32>;
-#endif  // NO_THREEWAY_CRC32C
-  }
+#endif // NO_THREEWAY_CRC32C
+
+    }  // end isPCLMULQDQ()
+    else {  // PCLMULQDQ not supported during run time
+      return ExtendImpl<Fast_CRC32>;
+    }
+  }  // end isSSE42()
   else {
     return ExtendImpl<Slow_CRC32>;
   }
+
 #else  //HAVE_POWER8
   return isAltiVec() ? ExtendPPCImpl : ExtendImpl<Slow_CRC32>;
 #endif
