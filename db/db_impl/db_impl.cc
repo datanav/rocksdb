@@ -3546,8 +3546,10 @@ Status DBImpl::CreateColumnFamily(const ReadOptions& read_options,
   Status s = CreateColumnFamilyImpl(read_options, write_options, cf_options,
                                     column_family, handle);
   if (s.ok()) {
-    s.UpdateIfOk(
-        WrapUpCreateColumnFamilies(read_options, write_options, {&cf_options}));
+     // IS-7880: DBImpl::WriteOptionsFile() has been disabled here since it slows down
+     //          columnfamily creation and deletion, especially when we have lots of columnfamilies.
+     // s.UpdateIfOk(
+     //   WrapUpCreateColumnFamilies(read_options, write_options, {&cf_options}));
   }
   return s;
 }
@@ -3573,9 +3575,12 @@ Status DBImpl::CreateColumnFamilies(
     handles->push_back(handle);
     success_once = true;
   }
+
   if (success_once) {
-    s.UpdateIfOk(
-        WrapUpCreateColumnFamilies(read_options, write_options, {&cf_options}));
+    // IS-7880: DBImpl::WriteOptionsFile() has been disabled here since it slows down
+    //          columnfamily creation and deletion, especially when we have lots of columnfamilies.
+    // s.UpdateIfOk(
+    //    WrapUpCreateColumnFamilies(read_options, write_options, {&cf_options}));
   }
   return s;
 }
@@ -3605,8 +3610,10 @@ Status DBImpl::CreateColumnFamilies(
     cf_opts.push_back(&column_families[i].options);
   }
   if (success_once) {
-    s.UpdateIfOk(
-        WrapUpCreateColumnFamilies(read_options, write_options, cf_opts));
+    // IS-7880: DBImpl::WriteOptionsFile() has been disabled here since it slows down
+    //          columnfamily creation and deletion, especially when we have lots of columnfamilies.
+    // s.UpdateIfOk(
+    //    WrapUpCreateColumnFamilies(read_options, write_options, cf_opts));
   }
   return s;
 }
@@ -3709,8 +3716,10 @@ Status DBImpl::DropColumnFamily(ColumnFamilyHandle* column_family) {
   InstrumentedMutexLock ol(&options_mutex_);
   Status s = DropColumnFamilyImpl(column_family);
   if (s.ok()) {
+    // IS-7880: DBImpl::WriteOptionsFile() has been disabled here since it slows down
+    //          columnfamily creation and deletion, especially when we have lots of columnfamilies.
     // TODO: plumb Env::IOActivity, Env::IOPriority
-    s = WriteOptionsFile(WriteOptions(), false /*db_mutex_already_held*/);
+    // s = WriteOptionsFile(WriteOptions(), false /*db_mutex_already_held*/);
   }
   return s;
 }
@@ -3728,12 +3737,14 @@ Status DBImpl::DropColumnFamilies(
     success_once = true;
   }
   if (success_once) {
+    // IS-7880: DBImpl::WriteOptionsFile() has been disabled here since it slows down
+    //          columnfamily creation and deletion, especially when we have lots of columnfamilies.
     // TODO: plumb Env::IOActivity, Env::IOPriority
-    Status persist_options_status =
-        WriteOptionsFile(WriteOptions(), false /*db_mutex_already_held*/);
-    if (s.ok() && !persist_options_status.ok()) {
-      s = persist_options_status;
-    }
+    // Status persist_options_status =
+    //     WriteOptionsFile(WriteOptions(), false /*db_mutex_already_held*/);
+    // if (s.ok() && !persist_options_status.ok()) {
+    //   s = persist_options_status;
+    // }
   }
   return s;
 }
