@@ -2982,8 +2982,10 @@ Status DBImpl::CreateColumnFamily(const ColumnFamilyOptions& cf_options,
   assert(handle != nullptr);
   Status s = CreateColumnFamilyImpl(cf_options, column_family, handle);
   if (s.ok()) {
-    s = WriteOptionsFile(true /*need_mutex_lock*/,
-                         true /*need_enter_write_thread*/);
+      // IS-7880: DBImpl::WriteOptionsFile() has been disabled here since it slows down
+      //          columnfamily creation and deletion, especially when we have lots of columnfamilies.
+      //s = WriteOptionsFile(true /*need_mutex_lock*/,
+      //                   true /*need_enter_write_thread*/);
   }
   return s;
 }
@@ -3006,12 +3008,15 @@ Status DBImpl::CreateColumnFamilies(
     handles->push_back(handle);
     success_once = true;
   }
+
   if (success_once) {
-    Status persist_options_status = WriteOptionsFile(
-        true /*need_mutex_lock*/, true /*need_enter_write_thread*/);
-    if (s.ok() && !persist_options_status.ok()) {
-      s = persist_options_status;
-    }
+    // IS-7880: DBImpl::WriteOptionsFile() has been disabled here since it slows down
+    //          columnfamily creation and deletion, especially when we have lots of columnfamilies.
+    //Status persist_options_status = WriteOptionsFile(
+    //    true /*need_mutex_lock*/, true /*need_enter_write_thread*/);
+    //if (s.ok() && !persist_options_status.ok()) {
+    //  s = persist_options_status;
+    //}
   }
   return s;
 }
@@ -3035,11 +3040,13 @@ Status DBImpl::CreateColumnFamilies(
     success_once = true;
   }
   if (success_once) {
-    Status persist_options_status = WriteOptionsFile(
-        true /*need_mutex_lock*/, true /*need_enter_write_thread*/);
-    if (s.ok() && !persist_options_status.ok()) {
-      s = persist_options_status;
-    }
+    // IS-7880: DBImpl::WriteOptionsFile() has been disabled here since it slows down
+    //          columnfamily creation and deletion, especially when we have lots of columnfamilies.
+    //Status persist_options_status = WriteOptionsFile(
+    //    true /*need_mutex_lock*/, true /*need_enter_write_thread*/);
+    //if (s.ok() && !persist_options_status.ok()) {
+    //  s = persist_options_status;
+    //}
   }
   return s;
 }
@@ -3139,10 +3146,12 @@ Status DBImpl::CreateColumnFamilyImpl(const ColumnFamilyOptions& cf_options,
 Status DBImpl::DropColumnFamily(ColumnFamilyHandle* column_family) {
   assert(column_family != nullptr);
   Status s = DropColumnFamilyImpl(column_family);
-  if (s.ok()) {
-    s = WriteOptionsFile(true /*need_mutex_lock*/,
-                         true /*need_enter_write_thread*/);
-  }
+  // IS-7880: DBImpl::WriteOptionsFile() has been disabled here since it slows down
+  //          columnfamily creation and deletion, especially when we have lots of columnfamilies.
+  //if (s.ok()) {
+  //  s = WriteOptionsFile(true /*need_mutex_lock*/,
+  //                       true /*need_enter_write_thread*/);
+  //}
   return s;
 }
 
@@ -3158,11 +3167,13 @@ Status DBImpl::DropColumnFamilies(
     success_once = true;
   }
   if (success_once) {
-    Status persist_options_status = WriteOptionsFile(
-        true /*need_mutex_lock*/, true /*need_enter_write_thread*/);
-    if (s.ok() && !persist_options_status.ok()) {
-      s = persist_options_status;
-    }
+    // IS-7880: DBImpl::WriteOptionsFile() has been disabled here since it slows down
+    //          columnfamily creation and deletion, especially when we have lots of columnfamilies.
+    //Status persist_options_status = WriteOptionsFile(
+    //    true /*need_mutex_lock*/, true /*need_enter_write_thread*/);
+    //if (s.ok() && !persist_options_status.ok()) {
+    //  s = persist_options_status;
+    //}
   }
   return s;
 }
