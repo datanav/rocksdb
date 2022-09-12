@@ -3,7 +3,7 @@ This repository contains forked version of rocksdb with a couple of sesam-specif
 
 To update to a new version of rocksdb, do the following:
 
-1. In a webbrowser, go to https://github.com/datanav/rocksdb and click the "Fetch upstream"-button and then the "Fetch and merge" button.
+1. In a webbrowser, go to https://github.com/datanav/rocksdb and click the "Sync fork"->"Update branch"-button.
 2. In your local checkout of datanav/rocksdb, run this command:
    git fetch --tags upstream
 
@@ -32,3 +32,8 @@ To update to a new version of rocksdb, do the following:
 
 9. Push your changes:
    git push
+   (You may have to add a '--set-upstream' parameter, but if so
+    git will tell you).
+
+10. Create a pull-request in the "datanav/lake" repo with an updated "sesam_from_tag_<version>" in this file:
+    https://github.com/datanav/lake/blob/master/docker/base/rocksdb.sh
